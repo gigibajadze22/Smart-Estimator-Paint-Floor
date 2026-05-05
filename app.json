@@ -1,17 +1,22 @@
 {
   "expo": {
-    "name": "DIY Estimator",
+    "name": "Smart Estimator: Paint & Floor",
     "slug": "diy-estimator",
     "version": "1.0.0",
     "scheme": "diy-estimator",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
+    "icon": "./assets/images/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.gigibajadze.diyestimator"
     },
     "android": {
-      "package": "com.gigibajadze.diyestimator"
+      "package": "com.gigibajadze.diyestimator",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0f172a"
+      }
     },
     "plugins": [
       "expo-router",

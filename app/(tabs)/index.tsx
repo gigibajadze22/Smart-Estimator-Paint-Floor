@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Keyboard, Switch, StatusBar } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -6,6 +6,8 @@ import Constants from 'expo-constants';
 let BannerAd: any = null;
 let BannerAdSize: any = null;
 let TestIds: any = null;
+let InterstitialAd: any = null;
+let AdEventType: any = null;
 
 const isExpoGo = Constants.appOwnership === 'expo';
 
@@ -16,13 +18,23 @@ if (!isExpoGo) {
     BannerAd = MobileAds.BannerAd;
     BannerAdSize = MobileAds.BannerAdSize;
     TestIds = MobileAds.TestIds;
+    InterstitialAd = MobileAds.InterstitialAd;
+    AdEventType = MobileAds.AdEventType;
   } catch (e) {
     console.log("Ads module not found");
   }
 }
 
-// შენი Ad Unit ID
-const adUnitId = 'ca-app-pub-3563416976653646/5564522759';
+// Ad Unit ID-ები
+const bannerAdUnitId = 'ca-app-pub-3563416976653646/5564522759';
+const interstitialAdUnitId = 'ca-app-pub-3563416976653646/6569115680';
+
+// Interstitial რეკლამის შექმნა (მხოლოდ build ვერსიისთვის)
+const interstitial = !isExpoGo && InterstitialAd 
+  ? InterstitialAd.createForAdRequest(interstitialAdUnitId, {
+      requestNonPersonalizedAdsOnly: true,
+    }) 
+  : null;
 
 interface CalculationResult {
   area: string;
@@ -38,6 +50,33 @@ export default function Index() {
   const [length, setLength] = useState('');
   const [height, setHeight] = useState('');
   const [result, setResult] = useState<CalculationResult | null>(null);
+  const [calcCount, setCalcCount] = useState(0); // დათვლების მთვლელი
+
+  // რეკლამის ჩატვირთვის ლოგიკა
+  useEffect(() => {
+    if (!isExpoGo && interstitial) {
+      const unsubscribeLoaded = interstitial.addAdEventListener(AdEventType.LOADED, () => {
+        console.log('Interstitial Ad Loaded');
+      });
+      const unsubscribeClosed = interstitial.addAdEventListener(AdEventType.CLOSED, () => {
+        console.log('Interstitial Ad Closed');
+        interstitial.load(); // შემდეგი დათვლისთვის თავიდან ვტვირთავთ
+      });
+
+      interstitial.load();
+
+      return () => {
+        unsubscribeLoaded();
+        unsubscribeClosed();
+      };
+    }
+  }, []);
+
+  const showInterstitial = () => {
+    if (!isExpoGo && interstitial && interstitial.loaded) {
+      interstitial.show();
+    }
+  };
 
   const calculate = () => {
     Keyboard.dismiss();
@@ -46,6 +85,13 @@ export default function Index() {
     const h = parseFloat(height);
 
     if (!w || (activeTab === 'floor' ? !l : !h)) return;
+
+    // რეკლამის ლოგიკა: ყოველ მე-3 დაჭერაზე
+    const nextCount = calcCount + 1;
+    setCalcCount(nextCount);
+    if (nextCount % 3 === 0) {
+      showInterstitial();
+    }
 
     if (activeTab === 'paint') {
       const totalArea = w * h;
@@ -82,7 +128,7 @@ export default function Index() {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
-        <Text style={styles.header}>🛠️ DIY Estimator</Text>
+        <Text style={styles.header}>🛠️ Smart Estimator</Text>
         
         <View style={styles.unitToggleRow}>
           <Text style={[styles.unitLabel, !isImperial && styles.activeUnitText]}>Metric</Text>
@@ -138,7 +184,7 @@ export default function Index() {
         <View style={styles.adSection}>
           {!isExpoGo && BannerAd ? (
             <BannerAd
-              unitId={__DEV__ ? TestIds.BANNER : adUnitId}
+              unitId={__DEV__ ? TestIds.BANNER : bannerAdUnitId}
               size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
               requestOptions={{ requestNonPersonalizedAdsOnly: true }}
             />
